@@ -1,0 +1,83 @@
+Index: libgnome-2.32.1/libgnome/gnome-program.c
+===================================================================
+--- libgnome-2.32.1.orig/libgnome/gnome-program.c	2013-12-27 12:30:31.129282398 +0100
++++ libgnome-2.32.1/libgnome/gnome-program.c	2013-12-27 12:31:01.156201289 +0100
+@@ -935,7 +935,7 @@ gnome_program_locate_file (GnomeProgram
+ 
+     switch (domain) {
+     case GNOME_FILE_DOMAIN_LIBDIR:
+-	prefix_rel = "/lib";
++	prefix_rel = "/lib/" MULTIARCH;
+ 	attr_name = GNOME_PARAM_GNOME_LIBDIR;
+ 	attr_rel = "";
+ 	break;
+@@ -1512,10 +1512,10 @@ get_module_path (void)
+ 
+   if (module_path_env)
+     module_path = g_build_path (G_SEARCHPATH_SEPARATOR_S,
+-				module_path_env, LIBGNOME_LIBDIR, NULL);
++				module_path_env, LIBGNOME_LIBDIR, "/usr/lib", NULL);
+   else
+     module_path = g_build_path (G_SEARCHPATH_SEPARATOR_S,
+-				LIBGNOME_LIBDIR, NULL);
++				LIBGNOME_LIBDIR, "/usr/lib", NULL);
+ 
+   result = split_file_list (module_path);
+   g_free (module_path);
+@@ -1669,29 +1669,41 @@ gnome_program_parse_args (GnomeProgram *
+ static char *
+ find_accessibility_module (GnomeProgram *program, const char *libname)
+ {
+-	char *sub;
++	char *fname0;
++	char *fname1;
++	char *sub0;
++	char *sub1;
+ 	char *path;
+-	char *fname;
+-	char *retval;
+ 
+-	fname = g_strconcat (libname, "." G_MODULE_SUFFIX, NULL);
+-	sub = g_strconcat ("gtk-2.0/modules", G_DIR_SEPARATOR_S, fname, NULL);
++	fname0 = g_strconcat (libname, "." G_MODULE_SUFFIX, NULL);
++	fname1 = g_strconcat ("../", fname0, NULL);
++	sub0 = g_strconcat ("gtk-2.0/modules", G_DIR_SEPARATOR_S, fname0, NULL);
++	sub1 = g_strconcat ("../", sub0, NULL);
+ 
+-	path = gnome_program_locate_file (
+-		program, GNOME_FILE_DOMAIN_LIBDIR, sub, TRUE, NULL);
++	/* Whoever wrote gnome_program_locate_file needs hanging.
++           We're stuck with ugly workarounds. */
+ 
+-	g_free (sub);
++	path = gnome_program_locate_file (
++		program, GNOME_FILE_DOMAIN_LIBDIR, sub0, TRUE, NULL);
+ 
+-	if (path)
+-		retval = path;
+-	else
+-		retval = gnome_program_locate_file (
++	if (!path)
++		path = gnome_program_locate_file (
++		        program, GNOME_FILE_DOMAIN_LIBDIR, sub1, TRUE, NULL);
++	if (!path)
++		path = gnome_program_locate_file (
++			program, GNOME_FILE_DOMAIN_LIBDIR,
++			fname0, TRUE, NULL);
++	if (!path)
++		path = gnome_program_locate_file (
+ 			program, GNOME_FILE_DOMAIN_LIBDIR,
+-			fname, TRUE, NULL);
++			fname1, TRUE, NULL);
+ 
+-	g_free (fname);
++	g_free (sub0);
++	g_free (sub1);
++	g_free (fname0);
++	g_free (fname1);
+ 
+-	return retval;
++	return path;
+ }
+ 
+ static gboolean
